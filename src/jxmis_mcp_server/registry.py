@@ -48,6 +48,7 @@ ALL_TOOLS: dict[str, ToolSpec] = {
         "[JXMIS Auth] 发起项目管理平台钉钉扫码登录。已有有效登录态且 force=false 时直接返回 active。",
         obj({
             "force": {"type": "boolean", "default": False},
+            "include_qr_image": {"type": "boolean", "default": True},
             "include_qr_terminal": {"type": "boolean", "default": False},
             "timeout_seconds": {
                 "type": "integer",
@@ -63,6 +64,7 @@ ALL_TOOLS: dict[str, ToolSpec] = {
         "[JXMIS Auth] 查询扫码登录会话状态；不传 login_session_id 时返回当前连接器状态。",
         obj({
             "login_session_id": {"type": "string"},
+            "include_qr_image": {"type": "boolean", "default": True},
             "include_qr_terminal": {"type": "boolean", "default": False},
         }),
     ),

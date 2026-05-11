@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import io
 import os
 import random
@@ -155,6 +156,7 @@ class JxmisMcpClient:
 
     async def connect(self, args: dict[str, Any]) -> dict[str, Any]:
         force = bool(args.get("force", False))
+        include_qr_image = bool(args.get("include_qr_image", True))
         include_qr_terminal = bool(args.get("include_qr_terminal", False))
         timeout_seconds = self._login_timeout(args)
 
@@ -169,6 +171,7 @@ class JxmisMcpClient:
         if pending and not force:
             return self._login_session_response(
                 pending,
+                include_qr_image=include_qr_image,
                 include_qr_terminal=include_qr_terminal,
             )
 
@@ -190,10 +193,12 @@ class JxmisMcpClient:
         session = await self._wait_for_login_qr(session_id, timeout=min(30, timeout_seconds))
         return self._login_session_response(
             session,
+            include_qr_image=include_qr_image,
             include_qr_terminal=include_qr_terminal,
         )
 
     async def get_login_status(self, args: dict[str, Any]) -> dict[str, Any]:
+        include_qr_image = bool(args.get("include_qr_image", True))
         include_qr_terminal = bool(args.get("include_qr_terminal", False))
         session_id = str(args.get("login_session_id") or "").strip()
         if session_id:
@@ -202,6 +207,7 @@ class JxmisMcpClient:
                 return self._failure("login_session_id not found", error_code="NOT_FOUND")
             return self._login_session_response(
                 session,
+                include_qr_image=include_qr_image,
                 include_qr_terminal=include_qr_terminal,
             )
         return await self._connector_state_response(row=self.store.get_state(CONNECTOR_ID))
@@ -333,9 +339,11 @@ class JxmisMcpClient:
         self,
         session: dict[str, Any],
         *,
+        include_qr_image: bool,
         include_qr_terminal: bool,
     ) -> dict[str, Any]:
         qr_url = str(session.get("qr_url") or "")
+        qr_image_data_url = self._qr_image_data_url(qr_url) if include_qr_image else ""
         data: dict[str, Any] = {
             "status": str(session.get("status") or "starting"),
             "connected": session.get("status") == "active",
@@ -343,9 +351,18 @@ class JxmisMcpClient:
             "qr_url": qr_url,
             "ding_talk_login_url": qr_url,
             "scan_url": qr_url,
+            "qr_image_data_url": qr_image_data_url,
+            "qr_render_instruction": (
+                "请向用户直接渲染二维码图片：优先使用 qr_image_data_url 作为图片 src；"
+                "如果客户端不支持 data: 图片，请根据 qr_url / ding_talk_login_url 生成二维码图片显示。"
+            )
+            if qr_url
+            else "",
             "error_message": str(session.get("error_message") or ""),
             "message": self._login_message(str(session.get("status") or ""), bool(qr_url)),
         }
+        if not qr_image_data_url:
+            data.pop("qr_image_data_url", None)
         if include_qr_terminal:
             data["qr_terminal"] = self._qr_terminal(qr_url)
         return {"ok": True, "data": data}
@@ -395,8 +412,26 @@ class JxmisMcpClient:
         if status == "failed":
             return "项目管理平台登录失败，请重试"
         if has_qr:
-            return "请打开 qr_url / ding_talk_login_url，或复制该链接到浏览器后使用钉钉扫码登录项目管理平台"
+            return (
+                "请直接向用户渲染二维码图片：优先使用 qr_image_data_url；"
+                "如果客户端无法加载 data: 图片，请根据 qr_url / ding_talk_login_url 生成二维码图片显示，"
+                "不要显示乱排的终端字符二维码。"
+            )
         return "正在生成项目管理平台登录二维码"
+
+    @staticmethod
+    def _qr_image_data_url(qr_url: str) -> str:
+        if not qr_url:
+            return ""
+        try:
+            import qrcode
+        except ModuleNotFoundError:
+            return ""
+        image = qrcode.make(qr_url)
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+        return f"data:image/png;base64,{encoded}"
 
     @staticmethod
     def _qr_terminal(qr_url: str) -> str:
