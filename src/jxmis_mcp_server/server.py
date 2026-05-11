@@ -3,12 +3,8 @@
 from __future__ import annotations
 
 import contextlib
-import copy
-import json
 from collections.abc import AsyncIterator
-from typing import Any
 
-from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.fastmcp.server import StreamableHTTPASGIApp, StreamableHTTPSessionManager
 from mcp.server.models import InitializationOptions
@@ -40,37 +36,9 @@ def create_mcp_server(handlers: JxmisToolHandlers) -> Server:
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict):
-        result = await handlers.handle(name, arguments or {})
-        return _format_tool_result(result)
+        return await handlers.handle(name, arguments or {})
 
     return server
-
-
-def _format_tool_result(result: dict[str, Any]):
-    qr_image = (((result.get("data") or {}) if isinstance(result, dict) else {}).get("qr_image_data_url") or "")
-    if not isinstance(qr_image, str) or not qr_image.startswith("data:image/"):
-        return result
-
-    header, _, encoded = qr_image.partition(",")
-    if not encoded:
-        return result
-    mime_type = header.removeprefix("data:").split(";", 1)[0] or "image/png"
-
-    text_payload = copy.deepcopy(result)
-    data = text_payload.get("data")
-    if isinstance(data, dict):
-        data["qr_image_data_url"] = "[attached as MCP image content]"
-
-    return (
-        [
-            types.TextContent(
-                type="text",
-                text=json.dumps(text_payload, ensure_ascii=False, indent=2),
-            ),
-            types.ImageContent(type="image", data=encoded, mimeType=mime_type),
-        ],
-        result,
-    )
 
 
 def create_app(settings: Settings | None = None) -> Starlette:

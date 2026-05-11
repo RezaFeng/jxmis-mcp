@@ -56,7 +56,9 @@ jxmis-mcp.rezafeng.top:8443 {
 
 1. Add the MCP config to the client.
 2. Call `jxmis_connect`.
-3. Scan the returned QR code with DingTalk.
+3. Open or copy the returned `qr_url` / `ding_talk_login_url`, then scan it
+   with DingTalk. The server does not return `data:` images by default because
+   many desktop MCP clients cannot render them reliably.
 4. Poll `jxmis_get_login_status`.
 5. Use the business tools after status becomes `active`.
 
