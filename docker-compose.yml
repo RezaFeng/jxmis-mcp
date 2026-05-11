@@ -1,0 +1,18 @@
+services:
+  jxmis-mcp:
+    build: .
+    container_name: jxmis-mcp
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      JXMIS_MCP_HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - ./data:/var/lib/jxmis-mcp
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8787/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
