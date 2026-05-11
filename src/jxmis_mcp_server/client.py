@@ -353,7 +353,8 @@ class JxmisMcpClient:
             "scan_url": qr_url,
             "qr_image_data_url": qr_image_data_url,
             "qr_render_instruction": (
-                "请向用户直接渲染二维码图片：优先使用 qr_image_data_url 作为图片 src；"
+                "请优先使用 HTML 渲染 qr_image_data_url 的 base64 二维码图片，例如 "
+                "<img src=\"{qr_image_data_url}\" alt=\"JXMIS 钉钉登录二维码\" />；"
                 "如果客户端不支持 data: 图片，请根据 qr_url / ding_talk_login_url 生成二维码图片显示。"
             )
             if qr_url
@@ -413,7 +414,8 @@ class JxmisMcpClient:
             return "项目管理平台登录失败，请重试"
         if has_qr:
             return (
-                "请直接向用户渲染二维码图片：优先使用 qr_image_data_url；"
+                "请优先使用 HTML 渲染 qr_image_data_url 的 base64 二维码图片，"
+                "例如 <img src=\"{qr_image_data_url}\" alt=\"JXMIS 钉钉登录二维码\" />；"
                 "如果客户端无法加载 data: 图片，请根据 qr_url / ding_talk_login_url 生成二维码图片显示，"
                 "不要显示乱排的终端字符二维码。"
             )

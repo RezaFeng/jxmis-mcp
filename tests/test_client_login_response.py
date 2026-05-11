@@ -22,8 +22,9 @@ def test_login_response_returns_scan_url_and_data_image_by_default():
     assert data["ding_talk_login_url"] == "https://login.dingtalk.com/example"
     assert data["scan_url"] == "https://login.dingtalk.com/example"
     assert data["qr_image_data_url"].startswith("data:image/png;base64,")
-    assert "渲染二维码图片" in data["message"]
+    assert "HTML 渲染 qr_image_data_url" in data["message"]
     assert "qr_image_data_url" in data["qr_render_instruction"]
+    assert "<img src=" in data["qr_render_instruction"]
     assert "qr_terminal" not in data
 
 
